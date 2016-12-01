@@ -98,20 +98,40 @@ module.exports = (robot) ->
     name = res.match[1]
     res.reply placeScore(findPlace(name))
 
-
-  robot.hear /I order (.*):(.*)/i, (res) ->
+# Order with a price
+  robot.hear /I order (.*): *([0-9]*,+[0-9]*)/i, (res) ->
     name = res.message.user.name
     item = res.match[1]
     price = res.match[2]
+    res.reply "foo"
     order = {
       name: name,
       item: item,
-      price: price || 0
+      price: price
     }
-    if price
-      res.reply "[" + order.name + "] " + order.item + " " + order.price
-    else
-      res.reply "[" + order.name + "] " + order.item + " "
+    orders.push order
+    res.reply "[" + order.name + "] " + order.item + " (" + order.price + "€)"
+
+# Oder with no price
+  robot.hear /I order (.*)/i, (res) ->
+    name = res.message.user.name
+    item = res.match[1]
+    if item.indexOf(':') > 0
+      return
+    res.reply "bar"
+    order = {
+      name: name,
+      item: item,
+      price: 0
+    }
+    orders.push order
+    res.reply "[" + order.name + "] " + order.item + " "
+
+  robot.hear /list orders/i, (res) ->
+    for order in orders
+      res.reply " - [" + order.name + "] " + order.item + " (" + order.price + "€)"
+
+
 
 # Helping Methods #
 
