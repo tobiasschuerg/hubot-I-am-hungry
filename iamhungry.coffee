@@ -18,7 +18,7 @@ module.exports = (robot) ->
     place = findPlace(name)
     if (place)
       user = res.message.user.name
-      if (name not in place.voters)
+      if (user not in place.voters)
         place.voters.push user
         res.reply "vote counted. #{name} has now " + place.voters.length + " votes"
       else
@@ -55,6 +55,7 @@ module.exports = (robot) ->
   robot.hear /I am hungry/i, (res) ->
     if (deadline)
       res.reply "voting has already begun. deadline is: " + deadline.toLocaleTimeString()
+      res.reply "Cast your vote by saying 'vote <place name>'"
       return
     res.reply "Ok, let's make plans"
     res.reply "I know " + places.length + " places where we could go"
@@ -96,10 +97,12 @@ module.exports = (robot) ->
 
   robot.hear /What is the score of (.*)/i, (res) ->
     name = res.match[1]
-    res.reply placeScore(findPlace(name))
+    place = findPlace(name)
+    res.reply placeScore(place)
+    res.reply placeStatus place
 
 # Order with a price
-  robot.hear /I order (.*): *([0-9]*,+[0-9]*)/i, (res) ->
+  robot.hear /I order (.*) *: *([0-9]*,+[0-9]*)/i, (res) ->
     name = res.message.user.name
     item = res.match[1]
     price = res.match[2]
@@ -110,7 +113,7 @@ module.exports = (robot) ->
       price: price
     }
     orders.push order
-    res.reply "[" + order.name + "] " + order.item + " (" + order.price + "€)"
+    res.reply printOrder order
 
 # Oder with no price
   robot.hear /I order (.*)/i, (res) ->
@@ -125,16 +128,25 @@ module.exports = (robot) ->
       price: 0
     }
     orders.push order
-    res.reply "[" + order.name + "] " + order.item + " "
+    res.reply printOrder order
 
+# list all orders
   robot.hear /list orders/i, (res) ->
+    res.reply " --- ORDERS --- "
     for order in orders
-      res.reply " - [" + order.name + "] " + order.item + " (" + order.price + "€)"
+      res.reply printOrder order
 
 
 
-# Helping Methods #
+# Heler Methods #
 
+  one_day = 1000 * 60 * 60 * 24
+
+  printOrder = (order) ->
+    if order.price
+      return "[" + order.name + "] " + order.item + " (" + order.price + "€)"
+    else
+      return "[" + order.name + "] " + order.item + " "
 
   listPlaces = () ->
     result = "our places:\n"
@@ -151,16 +163,18 @@ module.exports = (robot) ->
       if place.name == name then return place
     return null
 
+
   placeStatus = (place) ->
     return place.haters.length + " people hate and " + place.lovers.length + " people love " + place.name
+
 
   placeScore = (place) ->
     score = 1
     score = score + (place.lovers.length - place.haters.length)
     score = score + daysNotBeenThere(place)
+    score = score + place.voters.length
     return score
 
-  one_day = 1000 * 60 * 60 * 24
 
   daysNotBeenThere = (place) ->
     if (place.dateLastVist)
